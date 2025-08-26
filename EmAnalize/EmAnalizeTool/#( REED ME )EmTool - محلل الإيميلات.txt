@@ -1,0 +1,42 @@
+# EmTool - محلل الإيميلات
+
+What it does
+
+Reads emails and extracts all Artifacts with a single click
+runs local, all you need is once you have the .eml file in your device copy and paste the path to the program
+
+Stores URLs in an Array since there can be more than one
+and defung the,
+
+Why javax.mail and not txt
+
+javax.mail handles emails directly
+
+Using txt files would be harder and need extra processing
+
+How to run
+
+Compile
+
+javac -cp ".;lib/*" -encoding UTF-8 EmTool.java
+java -cp ".;lib/*" EmTool
+
+________________________________________
+-cp ".;lib/*" includes all libraries
+________________________________________
+then 
+Run
+
+ وش يسوي البرنامج
+- يقرأ الإيميل ويطلع لك  كل الروابط اللي فيه
+- يخزن الروابط في Array عشان ممكن يكون في أكثر من رابط
+-تسهّل قراءة وتحليل واستخراج المعلومات من ملفات البريد الإلكتروني المعقدة 
+### ليش استخدمت javax.mail وما خليته txt
+- مكتبة javax.mail جاهزة تتعامل مع الإيميلات مباشرة
+- التعامل مع ملف txt صعب ويحتاج معالجة كثير
+
+### طريقة التشغيل
+javac -cp ".;lib/*" -encoding UTF-8 EmTool.java
+java -cp ".;lib/*" EmTool 
+يحتاج تسويها اول مره بس بالتيرمنل 
+داخل فيجوال ستديو كود
