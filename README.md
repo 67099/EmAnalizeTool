@@ -10,12 +10,14 @@ Reads an `.eml` file and pulls out the artifacts an analyst needs: the key heade
 
 | Section | What you get |
 |---|---|
-| Headers | Subject, From, To, Date, Return-Path, Reply-To, Message-ID, SPF result (pass in green, fail/softfail in red) |
+| Email info | Subject, From, To, Date, Return-Path, Reply-To, Message-ID, X-Mailer, and the SPF, DKIM and DMARC results (pass in green, fail in red) |
+| Warning | Shown when Return-Path or Reply-To points to a different domain than the sender, a common phishing sign |
 | Links | Every `http(s)` URL from the plain-text and HTML body, de-duplicated and defanged (`hxxps://site[.]com`) |
-| Attachments | File name and type of each attachment |
+| Attachments | Name, type, size and SHA-256 of each attachment, ready to paste into VirusTotal |
+| Server IPs | IPs from the `Received` headers, from the sender's side to yours; private ranges are marked |
 | Footer | SHA-256 of the `.eml` file |
 
-Then copy the whole report or save it as a `.txt`. Double-click a single link to copy it.
+Then copy the whole report or save it as a `.txt`. Double-click any line (a link, a hash, an IP) to copy it.
 
 The interface switches between English and Arabic from the `EN | عربي` toggle at the top; in Arabic the layout flips right-to-left while addresses and links stay left-to-right.
 
@@ -39,6 +41,10 @@ Compile once; after that the `java` line is enough. Drop an `.eml` file on the w
 
 The original terminal version is still there: `java -cp ".;lib/*" EmTool`.
 
+### Font
+
+The window uses the Thmanyah font when it can find it. Download it from Thmanyah's official font page, then either install it on your system or put the `.ttf`/`.otf` files in `EmAnalizeTool/fonts/`. Without it the tool falls back to the system font. The font files are not included in this repo because Thmanyah's license does not allow redistributing them.
+
 ## Why javax.mail and not plain text
 
 `javax.mail` parses the email format directly (MIME parts, encodings, attachments). Reading the file as plain text would mean re-implementing all of that by hand.
@@ -58,11 +64,13 @@ EmAnalizeTool/
 ## بالعربي
 
 ### وش يسوي
-- يقرأ الإيميل ويطلع لك الترويسات المهمة: الموضوع، المرسل، المستلم، التاريخ، Return-Path، Reply-To، Message-ID، ونتيجة SPF (الأخضر pass، والأحمر fail أو softfail)
+- يطلع معلومات الإيميل: الموضوع، المرسل، المستلم، التاريخ، Return-Path، Reply-To، Message-ID، X-Mailer، ونتيجة SPF و DKIM و DMARC (الأخضر pass، والأحمر fail)
+- ينبهك لو Return-Path أو Reply-To يروح لدومين غير دومين المرسل، وهذي علامة تصيد معروفة
 - يطلع كل الروابط من نص الإيميل ومن الـ HTML، بدون تكرار، ومعطّلة بهالشكل `hxxps://site[.]com`
-- يعرض أسماء المرفقات ونوعها
-- يحسب SHA-256 للملف
-- تقدر تنسخ التقرير كامل أو تحفظه كملف نصي، ودبل كلك على أي رابط ينسخه
+- يعرض المرفقات: الاسم والنوع والحجم و SHA-256، تحطه في VirusTotal على طول
+- يطلع عناوين IP من ترويسات Received، من جهة المرسل لين توصلك، والداخلية عليها علامة
+- يحسب SHA-256 لملف الإيميل نفسه
+- تقدر تنسخ التقرير كامل أو تحفظه كملف نصي، ودبل كلك على أي سطر (رابط، هاش، IP) ينسخه
 
 الواجهة فيها عربي وإنجليزي من الزر اللي فوق `EN | عربي`، وبالعربي الواجهة تنقلب من اليمين لليسار.
 
@@ -80,6 +88,9 @@ java -cp ".;lib/*" EmToolGUI
 بعدها اسحب ملف الإيميل على النافذة، أو الصق مساره، أو اضغط **اختر ملف**.
 
 النسخة القديمة اللي تشتغل بالتيرمنل باقية: `java -cp ".;lib/*" EmTool`
+
+### الخط
+الأداة تستخدم خط ثمانية إذا لقته. نزّله من صفحة الخط الرسمية حقت ثمانية، وبعدها يا تثبته على جهازك، يا تحط ملفات `.ttf` أو `.otf` داخل فولدر `EmAnalizeTool/fonts/`. إذا ما لقته تشتغل بخط النظام. ملفات الخط مو موجودة في الريبو لأن رخصة ثمانية ما تسمح بإعادة نشرها.
 
 ### ليش javax.mail وما خليته txt
 - مكتبة javax.mail جاهزة وتتعامل مع الإيميلات مباشرة (الأجزاء، الترميز، المرفقات)

@@ -9,10 +9,9 @@ import java.util.List;
 import javax.swing.*;
 import javax.swing.border.*;
 
-// Desktop front-end for EmTool. Run: java -cp ".;lib/*" EmToolGUI
 public class EmToolGUI extends JFrame {
 
-    // palette: case-file paper, ink, one rust accent
+    // colors
     static final Color PAPER  = new Color(0xF1ECE2);
     static final Color SHEET  = new Color(0xFAF7F1);
     static final Color INK    = new Color(0x1D1B18);
@@ -20,44 +19,61 @@ public class EmToolGUI extends JFrame {
     static final Color RULE   = new Color(0xD6CEC0);
     static final Color RUST   = new Color(0xA8361B);
     static final Color OLIVE  = new Color(0x4F6B2E);
+    static final Color WARN_BG = new Color(0xF4E1D8);
+
+    static final String UI_FAMILY = findUiFamily();
 
     static final Font MONO      = new Font(Font.MONOSPACED, Font.PLAIN, 13);
     static final Font MONO_BOLD = new Font(Font.MONOSPACED, Font.BOLD, 13);
+    static final Font MONO_SMALL = new Font(Font.MONOSPACED, Font.PLAIN, 11);
     static final Font MARK      = new Font(Font.MONOSPACED, Font.BOLD, 30);
-    static final Font UI        = new Font(Font.DIALOG, Font.PLAIN, 13);
-    static final Font UI_SMALL  = new Font(Font.DIALOG, Font.PLAIN, 12);
-    static final Font UI_BOLD   = new Font(Font.DIALOG, Font.BOLD, 12);
+    static final Font UI        = new Font(UI_FAMILY, Font.PLAIN, 14);
+    static final Font UI_SMALL  = new Font(UI_FAMILY, Font.PLAIN, 12);
+    static final Font UI_BOLD   = new Font(UI_FAMILY, Font.BOLD, 13);
+    static final Font UI_TITLE  = new Font(UI_FAMILY, Font.BOLD, 14);
 
-    // ---- strings ----
+    // strings
     static final String[][] TEXT = {
-        // key,          English,                                   Arabic
-        {"tagline",   "email artifact extractor",                "محلل الإيميلات واستخراج الأدلة"},
+        {"tagline",   "email artifact extractor",                "محلل الإيميلات"},
         {"drop",      "Drop a .eml file here, or",               "اسحب ملف الإيميل هنا، أو"},
         {"browse",    "browse",                                  "اختر ملف"},
         {"analyze",   "Analyze",                                 "حلّل"},
-        {"headers",   "Headers",                                 "الترويسة"},
+        {"headers",   "Email info",                              "معلومات الإيميل"},
         {"links",     "Links (defanged)",                        "الروابط (معطّلة)"},
         {"attach",    "Attachments",                             "المرفقات"},
-        {"nolinks",   "No URLs found.",                          "ما فيه روابط."},
-        {"noattach",  "None.",                                   "لا يوجد."},
+        {"ips",       "Server IPs (sender first)",               "عناوين IP (من المرسل للمستلم)"},
+        {"noattach",  "No attachments.",                         "ما فيه مرفقات."},
+        {"noips",     "No IPs found.",                           "ما لقيت عناوين IP."},
         {"copy",      "Copy report",                             "نسخ التقرير"},
         {"save",      "Save .txt",                               "حفظ كملف نصي"},
         {"ready",     "ready. pick an .eml file to start",       "جاهز. اختر ملف الإيميل عشان نبدأ"},
         {"notfound",  "Error 404 |E!  file not found",           "Error 404 |E!  الملف مو موجود"},
-        {"failed",    "could not read this file: ",              "ما قدرت أقرأ الملف: "},
+        {"failed",    "could not read this file: ",              "ما قدرت أفتح الملف: "},
         {"done",      "done.",                                   "تم."},
-        {"copied",    "report copied to clipboard",              "تم النسخ"},
+        {"copied",    "copied",                                  "تم النسخ"},
         {"saved",     "saved to ",                               "انحفظ في "},
-        {"empty",     "nothing here yet",                        "لا شيء بعد"},
-        {"hint",      "double-click a link to copy it",          "دبل كلك على الرابط عشان تنسخه"},
+        {"empty",     "nothing here yet",                        "لسا ما اخترت ملف"},
+        {"hint",      "double-click any line to copy it",        "دبل كلك على أي سطر عشان تنسخه"},
+        {"private",   "internal network",                        "شبكة داخلية"},
+        {"mismatch",  "! %s goes to %s, but the sender is %s",  "! %s يروح لـ %s، والمرسل %s"},
     };
     static final Map<String, String[]> T = new HashMap<>();
     static { for (String[] r : TEXT) T.put(r[0], new String[]{r[1], r[2]}); }
 
+    static final Map<String, String> AR_KEYS = new HashMap<>();
+    static {
+        AR_KEYS.put("Subject", "الموضوع");
+        AR_KEYS.put("From", "من");
+        AR_KEYS.put("To", "إلى");
+        AR_KEYS.put("Date", "التاريخ");
+        AR_KEYS.put("Reply-To", "الرد يروح لـ");
+    }
+    static final String[] KEYS = {"Subject", "From", "To", "Date", "Return-Path", "Reply-To", "Message-ID", "SPF", "DKIM", "DMARC", "X-Mailer"};
+
     boolean arabic = false;
     String t(String k) { return T.get(k)[arabic ? 1 : 0]; }
 
-    // ---- state / widgets ----
+    // state
     EmailAnalyzer.Report report;
     final JTextField pathField = new JTextField();
     final JLabel tagline = new JLabel();
@@ -70,10 +86,13 @@ public class EmToolGUI extends JFrame {
     final SectionTitle hHead = new SectionTitle("01");
     final SectionTitle lHead = new SectionTitle("02");
     final SectionTitle aHead = new SectionTitle("03");
+    final SectionTitle iHead = new SectionTitle("04");
+    final JPanel warnBox = new JPanel();
     final JPanel headerRows = new JPanel(new GridBagLayout());
-    final DefaultListModel<String> linkModel = new DefaultListModel<>();
-    final JList<String> linkList = new JList<>(linkModel);
-    final JPanel attachBox = new JPanel();
+    JScrollPane headerScroll;
+    final CopyList linkList = new CopyList(RUST);
+    final CopyList attachList = new CopyList(INK);
+    final CopyList ipList = new CopyList(INK);
     final JLabel status = new JLabel();
     final JLabel hashLabel = new JLabel();
     final JLabel hintLabel = new JLabel();
@@ -83,8 +102,8 @@ public class EmToolGUI extends JFrame {
     public EmToolGUI() {
         super("EmTool");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setMinimumSize(new Dimension(860, 600));
-        setSize(1000, 680);
+        setMinimumSize(new Dimension(900, 640));
+        setSize(1100, 820);
         setLocationRelativeTo(null);
 
         JPanel root = new JPanel(new BorderLayout());
@@ -95,7 +114,6 @@ public class EmToolGUI extends JFrame {
         root.add(buildFooter(), BorderLayout.SOUTH);
         setContentPane(root);
 
-        // whole window accepts a dropped file
         root.setTransferHandler(new FileDrop());
         pathField.setTransferHandler(new FileDrop());
 
@@ -103,7 +121,7 @@ public class EmToolGUI extends JFrame {
         renderReport();
     }
 
-    // ---------- layout ----------
+    // layout
 
     JComponent buildTop() {
         JPanel top = new JPanel(new BorderLayout());
@@ -115,7 +133,6 @@ public class EmToolGUI extends JFrame {
         JLabel mark = new JLabel("EmTool");
         mark.setFont(MARK);
         mark.setForeground(INK);
-        tagline.setFont(MONO);
         tagline.setForeground(MUTED);
         brand.add(mark);
         brand.add(tagline);
@@ -126,7 +143,6 @@ public class EmToolGUI extends JFrame {
         langWrap.add(lang);
         top.add(langWrap, BorderLayout.LINE_END);
 
-        // file strip
         JPanel strip = new JPanel(new BorderLayout(12, 0)) {
             @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
@@ -172,27 +188,23 @@ public class EmToolGUI extends JFrame {
     }
 
     JComponent buildBody() {
-        // headers column
         headerRows.setBackground(SHEET);
-        JScrollPane hScroll = plainScroll(headerRows);
-        JPanel hCol = column(hHead, hScroll);
+        warnBox.setLayout(new BoxLayout(warnBox, BoxLayout.Y_AXIS));
+        warnBox.setBackground(WARN_BG);
+        JPanel hInner = new JPanel(new BorderLayout());
+        hInner.setBackground(SHEET);
+        hInner.add(warnBox, BorderLayout.NORTH);
+        headerScroll = plainScroll(headerRows);
+        hInner.add(headerScroll, BorderLayout.CENTER);
 
-        // links column
-        linkList.setFont(MONO);
-        linkList.setBackground(SHEET);
-        linkList.setForeground(RUST);
-        linkList.setSelectionBackground(INK);
-        linkList.setSelectionForeground(SHEET);
-        linkList.setFixedCellHeight(26);
-        linkList.setCellRenderer(new LinkRenderer());
-        linkList.addMouseListener(new MouseAdapter() {
-            @Override public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2 && linkList.getSelectedValue() != null) {
-                    copy(linkList.getSelectedValue());
-                    setStatus("copied", "", false);
-                }
-            }
-        });
+        JPanel ipCol = column(iHead, plainScroll(ipList));
+        ipCol.setPreferredSize(new Dimension(100, 130));
+
+        JPanel leftCol = new JPanel(new BorderLayout(0, 16));
+        leftCol.setOpaque(false);
+        leftCol.add(column(hHead, hInner), BorderLayout.CENTER);
+        leftCol.add(ipCol, BorderLayout.SOUTH);
+
         JPanel lInner = new JPanel(new BorderLayout());
         lInner.setBackground(SHEET);
         lInner.add(plainScroll(linkList), BorderLayout.CENTER);
@@ -201,19 +213,18 @@ public class EmToolGUI extends JFrame {
         hintLabel.setBorder(new EmptyBorder(6, 10, 6, 10));
         lInner.add(hintLabel, BorderLayout.SOUTH);
 
-        attachBox.setBackground(SHEET);
-        attachBox.setLayout(new BoxLayout(attachBox, BoxLayout.Y_AXIS));
-        attachBox.setBorder(new EmptyBorder(8, 10, 10, 10));
+        JPanel attCol = column(aHead, plainScroll(attachList));
+        attCol.setPreferredSize(new Dimension(100, 180));
 
-        JPanel right = new JPanel(new BorderLayout(0, 16));
-        right.setOpaque(false);
-        right.add(column(lHead, lInner), BorderLayout.CENTER);
-        right.add(column(aHead, attachBox), BorderLayout.SOUTH);
+        JPanel rightCol = new JPanel(new BorderLayout(0, 16));
+        rightCol.setOpaque(false);
+        rightCol.add(column(lHead, lInner), BorderLayout.CENTER);
+        rightCol.add(attCol, BorderLayout.SOUTH);
 
         JPanel body = new JPanel(new GridLayout(1, 2, 22, 0));
         body.setOpaque(false);
-        body.add(hCol);
-        body.add(right);
+        body.add(leftCol);
+        body.add(rightCol);
         return body;
     }
 
@@ -225,8 +236,7 @@ public class EmToolGUI extends JFrame {
         JPanel info = new JPanel();
         info.setOpaque(false);
         info.setLayout(new BoxLayout(info, BoxLayout.Y_AXIS));
-        status.setFont(MONO);
-        hashLabel.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 11));
+        hashLabel.setFont(MONO_SMALL);
         hashLabel.setForeground(MUTED);
         info.add(status);
         info.add(hashLabel);
@@ -258,14 +268,14 @@ public class EmToolGUI extends JFrame {
     }
 
     static JScrollPane plainScroll(JComponent c) {
-        JScrollPane s = new JScrollPane(c);
+        JScrollPane s = new JScrollPane(c, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         s.setBorder(BorderFactory.createEmptyBorder());
         s.getViewport().setBackground(SHEET);
         s.getVerticalScrollBar().setUnitIncrement(14);
         return s;
     }
 
-    // ---------- behaviour ----------
+    // actions
 
     void browse() {
         JFileChooser fc = new JFileChooser();
@@ -320,55 +330,76 @@ public class EmToolGUI extends JFrame {
     }
 
     void renderReport() {
+        ComponentOrientation o = getContentPane().getComponentOrientation();
+
         headerRows.removeAll();
         GridBagConstraints c = new GridBagConstraints();
         c.gridy = 0;
         c.anchor = GridBagConstraints.FIRST_LINE_START;
-        if (report == null) {
-            String[] keys = {"Subject", "From", "To", "Date", "Return-Path", "Reply-To", "Message-ID", "SPF"};
-            for (String k : keys) addRow(c, k, "");
-        } else {
-            for (Map.Entry<String, String> e : report.headers.entrySet()) addRow(c, e.getKey(), e.getValue());
-        }
+        for (String k : KEYS) addRow(c, k, report == null ? "" : report.headers.get(k));
         c.gridy++; c.weighty = 1; c.gridx = 0;
         headerRows.add(Box.createGlue(), c);
 
-        linkModel.clear();
-        if (report != null) for (String l : report.links) linkModel.addElement(l);
+        warnBox.removeAll();
+        if (report != null) {
+            for (EmailAnalyzer.Mismatch m : report.mismatches) {
+                JTextArea w = new JTextArea(String.format(t("mismatch"), m.header, m.domain, m.fromDomain));
+                w.setEditable(false);
+                w.setLineWrap(true);
+                w.setWrapStyleWord(true);
+                w.setOpaque(false);
+                w.setFont(UI_BOLD);
+                w.setForeground(RUST);
+                w.setBorder(new EmptyBorder(6, 12, 6, 12));
+                warnBox.add(w);
+            }
+        }
+        warnBox.setVisible(warnBox.getComponentCount() > 0);
 
-        attachBox.removeAll();
-        if (report != null && !report.attachments.isEmpty()) {
-            for (String a : report.attachments) attachBox.add(monoLine(a, INK));
+        linkList.clear();
+        attachList.clear();
+        ipList.clear();
+        if (report == null) {
+            linkList.placeholder = attachList.placeholder = ipList.placeholder = t("empty");
         } else {
-            attachBox.add(monoLine(report == null ? t("empty") : t("noattach"), MUTED));
+            linkList.placeholder = "-";
+            attachList.placeholder = t("noattach");
+            ipList.placeholder = t("noips");
+            for (String l : report.links) linkList.add(l, null, l);
+            for (EmailAnalyzer.Attachment a : report.attachments)
+                attachList.add(a.name + "   " + a.type + " · " + a.sizeText(), a.sha256, a.sha256);
+            for (String ip : report.ips) ipList.add(ip, isPrivate(ip) ? t("private") : null, ip);
         }
 
         lHead.count = report == null ? -1 : report.links.size();
         aHead.count = report == null ? -1 : report.attachments.size();
+        iHead.count = report == null ? -1 : report.ips.size();
         hashLabel.setText(report == null ? " " : "sha256  " + report.sha256);
         copyBtn.setEnabled(report != null);
         saveBtn.setEnabled(report != null);
 
-        headerRows.applyComponentOrientation(getContentPane().getComponentOrientation());
-        attachBox.applyComponentOrientation(getContentPane().getComponentOrientation());
-        // header values are addresses and ids, keep them left-to-right
+        headerRows.applyComponentOrientation(o);
+        warnBox.applyComponentOrientation(o);
         for (Component c2 : headerRows.getComponents())
             if (c2 instanceof JTextArea) c2.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
         revalidate();
         repaint();
+        SwingUtilities.invokeLater(() -> headerScroll.getViewport().setViewPosition(new Point(0, 0)));
     }
 
     void addRow(GridBagConstraints c, String key, String value) {
+        if (value == null) value = "";
+        boolean ar = arabic && AR_KEYS.containsKey(key);
         c.gridx = 0; c.weightx = 0; c.fill = GridBagConstraints.NONE;
-        c.insets = new Insets(9, 12, 9, 10);
-        JLabel k = new JLabel(key.toUpperCase());
-        k.setFont(new Font(Font.MONOSPACED, Font.BOLD, 11));
+        c.insets = new Insets(6, 12, 6, 10);
+        JLabel k = new JLabel(ar ? AR_KEYS.get(key) : key.toUpperCase());
+        k.setFont(ar ? UI_BOLD : new Font(Font.MONOSPACED, Font.BOLD, 11));
         k.setForeground(MUTED);
-        k.setPreferredSize(new Dimension(96, 16));
+        k.setPreferredSize(new Dimension(96, 18));
         headerRows.add(k, c);
 
         c.gridx = 1; c.weightx = 1; c.fill = GridBagConstraints.HORIZONTAL;
-        c.insets = new Insets(7, 0, 7, 12);
+        c.insets = new Insets(5, 0, 5, 12);
         JTextArea v = new JTextArea(value.isEmpty() ? "·" : value);
         v.setEditable(false);
         v.setLineWrap(true);
@@ -376,18 +407,17 @@ public class EmToolGUI extends JFrame {
         v.setFont(MONO);
         v.setOpaque(false);
         v.setBorder(null);
-        v.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
+        ((javax.swing.text.DefaultCaret) v.getCaret()).setUpdatePolicy(javax.swing.text.DefaultCaret.NEVER_UPDATE);
         v.setForeground(value.isEmpty() || value.equals("-") ? MUTED : INK);
-        if (key.equals("SPF") && !value.isEmpty()) {
+        if ((key.equals("SPF") || key.equals("DKIM") || key.equals("DMARC")) && !value.isEmpty() && !value.equals("-")) {
             String low = value.toLowerCase();
             if (low.startsWith("pass")) v.setForeground(OLIVE);
-            else if (low.startsWith("fail") || low.startsWith("softfail")) v.setForeground(RUST);
+            else if (low.startsWith("fail") || low.startsWith("softfail") || low.startsWith("none")) v.setForeground(RUST);
             v.setFont(MONO_BOLD);
         }
         headerRows.add(v, c);
         c.gridy++;
 
-        // hairline between rows
         c.gridx = 0; c.gridwidth = 2; c.insets = new Insets(0, 12, 0, 12);
         c.fill = GridBagConstraints.HORIZONTAL;
         JPanel line = new JPanel();
@@ -398,21 +428,13 @@ public class EmToolGUI extends JFrame {
         c.gridy++;
     }
 
-    static JLabel monoLine(String s, Color col) {
-        JLabel l = new JLabel(s);
-        l.setFont(MONO);
-        l.setForeground(col);
-        l.setBorder(new EmptyBorder(3, 0, 3, 0));
-        return l;
-    }
-
     void setArabic(boolean ar) {
         arabic = ar;
         ComponentOrientation o = ar ? ComponentOrientation.RIGHT_TO_LEFT : ComponentOrientation.LEFT_TO_RIGHT;
         getContentPane().applyComponentOrientation(o);
-        // file paths, header values and URLs stay left-to-right
         pathField.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
-        linkList.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
+        for (CopyList l : new CopyList[]{linkList, attachList, ipList})
+            SwingUtilities.getAncestorOfClass(JScrollPane.class, l).applyComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
         refreshText();
         renderReport();
     }
@@ -427,32 +449,59 @@ public class EmToolGUI extends JFrame {
         hHead.text = t("headers");
         lHead.text = t("links");
         aHead.text = t("attach");
+        iHead.text = t("ips");
         hintLabel.setText(t("hint"));
         status.setText(t(statusKey) + statusExtra);
         status.setForeground(statusError ? RUST : INK);
-        // Arabic reads badly in a monospaced face
         tagline.setFont(arabic ? UI : MONO);
         status.setFont(arabic ? UI : MONO);
-        Font f = arabic ? new Font(Font.DIALOG, Font.BOLD, 14) : UI_BOLD;
-        hHead.setFont(f); lHead.setFont(f); aHead.setFont(f);
+        hHead.setFont(UI_TITLE); lHead.setFont(UI_TITLE); aHead.setFont(UI_TITLE); iHead.setFont(UI_TITLE);
         lang.repaint();
         repaint();
     }
 
-    // ---------- small custom components ----------
+    // fonts
 
-    // "01 ─ HEADERS ─────────── 4"
+    static String findUiFamily() {
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        for (File dir : new File[]{new File("fonts"), new File(codeDir(), "fonts")}) {
+            File[] files = dir.listFiles((d, n) -> n.toLowerCase().matches(".*\\.(ttf|otf)$"));
+            if (files == null) continue;
+            for (File f : files) {
+                try { ge.registerFont(Font.createFont(Font.TRUETYPE_FONT, f)); } catch (Exception ignored) { }
+            }
+        }
+        String fallback = null;
+        for (String fam : ge.getAvailableFontFamilyNames(Locale.ROOT)) {
+            String low = fam.toLowerCase();
+            if (!low.contains("thmanyah") && !fam.contains("ثمانية")) continue;
+            if (low.contains("sans")) return fam;
+            if (fallback == null) fallback = fam;
+        }
+        return fallback != null ? fallback : Font.DIALOG;
+    }
+
+    static File codeDir() {
+        try {
+            return new File(EmToolGUI.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+        } catch (Exception e) {
+            return new File(".");
+        }
+    }
+
+    // widgets
+
     class SectionTitle extends JComponent {
         final String num;
         String text = "";
         int count = -1;
-        SectionTitle(String num) { this.num = num; setPreferredSize(new Dimension(100, 22)); }
+        SectionTitle(String num) { this.num = num; setPreferredSize(new Dimension(100, 24)); }
 
         @Override protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
             boolean rtl = !getComponentOrientation().isLeftToRight();
-            int w = getWidth(), y = 16;
+            int w = getWidth(), y = 17;
             String label = arabic ? text : text.toUpperCase();
 
             g2.setFont(MONO_BOLD);
@@ -487,7 +536,6 @@ public class EmToolGUI extends JFrame {
         }
     }
 
-    // square, flat button. primary = ink fill, secondary = ink outline
     static class FlatButton extends JButton {
         final boolean primary;
         boolean hover;
@@ -534,11 +582,10 @@ public class EmToolGUI extends JFrame {
         }
     }
 
-    // "EN / ع" text switch, active side underlined in rust
     class LangToggle extends JComponent {
         final String en = "EN", ar = "عربي";
         LangToggle() {
-            setPreferredSize(new Dimension(96, 26));
+            setPreferredSize(new Dimension(96, 28));
             setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             setToolTipText("English / عربي");
             addMouseListener(new MouseAdapter() {
@@ -549,8 +596,8 @@ public class EmToolGUI extends JFrame {
         @Override protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-            Font fe = MONO_BOLD, fa = new Font(Font.DIALOG, Font.BOLD, 14);
-            int y = 17;
+            Font fe = MONO_BOLD, fa = UI_TITLE;
+            int y = 18;
             g2.setFont(fe);
             int enW = g2.getFontMetrics().stringWidth(en);
             g2.setFont(fa);
@@ -562,33 +609,82 @@ public class EmToolGUI extends JFrame {
             g2.setColor(arabic ? MUTED : INK);
             g2.drawString(en, x0, y);
             g2.setColor(RULE);
-            g2.drawLine(x0 + enW + gap / 2, 5, x0 + enW + gap / 2, 21);
+            g2.drawLine(x0 + enW + gap / 2, 5, x0 + enW + gap / 2, 22);
             g2.setFont(fa);
             g2.setColor(arabic ? INK : MUTED);
             int arX = x0 + enW + gap;
             g2.drawString(ar, arX, y);
 
             g2.setColor(RUST);
-            if (arabic) g2.fillRect(arX, 23, arW, 2);
-            else g2.fillRect(x0, 23, enW, 2);
+            if (arabic) g2.fillRect(arX, 25, arW, 2);
+            else g2.fillRect(x0, 25, enW, 2);
             g2.dispose();
         }
     }
 
-    // numbered link rows: "01  hxxps://..."
-    static class LinkRenderer extends DefaultListCellRenderer {
-        @Override public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean sel, boolean focus) {
-            JLabel l = (JLabel) super.getListCellRendererComponent(list, value, index, sel, false);
-            String n = String.format("%02d", index + 1);
-            String muted = sel ? "#C9C1B3" : "#9A9184";
-            String body = value.toString().replace("&", "&amp;").replace("<", "&lt;");
-            l.setText("<html><span style='color:" + muted + "'>" + n + "</span>&nbsp;&nbsp;" + body + "</html>");
-            l.setBorder(new EmptyBorder(0, 10, 0, 10));
-            l.setFont(MONO);
-            if (!sel) { l.setBackground(SHEET); l.setForeground(RUST); }
-            return l;
+    class CopyList extends JList<String[]> {
+        final DefaultListModel<String[]> model = new DefaultListModel<>();
+        String placeholder = "";
+
+        CopyList(Color text) {
+            setModel(model);
+            setFont(MONO);
+            setBackground(SHEET);
+            setForeground(text);
+            setSelectionBackground(INK);
+            setSelectionForeground(SHEET);
+            setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
+            setCellRenderer(new DefaultListCellRenderer() {
+                @Override public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean sel, boolean focus) {
+                    JLabel l = (JLabel) super.getListCellRendererComponent(list, "", index, sel, false);
+                    String[] row = (String[]) value;
+                    String muted = sel ? "#C9C1B3" : "#9A9184";
+                    StringBuilder h = new StringBuilder("<html>\u200E<span style='color:" + muted + "'>")
+                        .append(String.format("%02d", index + 1)).append("</span>&nbsp;&nbsp;").append(esc(row[0]));
+                    if (row[1] != null)
+                        h.append("<br><span style='color:").append(muted)
+                         .append(row[1].matches(".*[\\u0600-\\u06FF].*") ? ";font-family:" + UI_FAMILY : "")
+                         .append("'><font size='2'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")
+                         .append(esc(row[1])).append("</font></span>");
+                    l.setText(h.append("</html>").toString());
+                    l.setBorder(new EmptyBorder(5, 10, 5, 10));
+                    l.setFont(MONO);
+                    if (!sel) { l.setBackground(SHEET); l.setForeground(text); }
+                    return l;
+                }
+            });
+            addMouseListener(new MouseAdapter() {
+                @Override public void mouseClicked(MouseEvent e) {
+                    if (e.getClickCount() == 2 && getSelectedValue() != null) {
+                        copy(getSelectedValue()[2]);
+                        setStatus("copied", "  " + getSelectedValue()[2], false);
+                    }
+                }
+            });
+        }
+
+        void add(String main, String sub, String copyValue) { model.addElement(new String[]{main, sub, copyValue}); }
+        void clear() { model.clear(); }
+
+        @Override protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            if (model.isEmpty() && !placeholder.isEmpty()) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                g2.setFont(UI_SMALL);
+                g2.setColor(MUTED);
+                int tw = g2.getFontMetrics().stringWidth(placeholder);
+                g2.drawString(placeholder, arabic ? getWidth() - tw - 12 : 12, 22);
+                g2.dispose();
+            }
         }
     }
+
+    static boolean isPrivate(String ip) {
+        return ip.startsWith("10.") || ip.startsWith("192.168.") || ip.matches("172\\.(1[6-9]|2\\d|3[01])\\..*");
+    }
+
+    static String esc(String s) { return s.replace("&", "&amp;").replace("<", "&lt;"); }
 
     class FileDrop extends TransferHandler {
         @Override public boolean canImport(TransferSupport s) {
