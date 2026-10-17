@@ -12,14 +12,24 @@ import javax.swing.border.*;
 public class EmToolGUI extends JFrame {
 
     // colors
-    static final Color PAPER  = new Color(0xF1ECE2);
-    static final Color SHEET  = new Color(0xFAF7F1);
-    static final Color INK    = new Color(0x1D1B18);
-    static final Color MUTED  = new Color(0x7A7266);
-    static final Color RULE   = new Color(0xD6CEC0);
-    static final Color RUST   = new Color(0xA8361B);
-    static final Color OLIVE  = new Color(0x4F6B2E);
-    static final Color WARN_BG = new Color(0xF4E1D8);
+    static boolean dark = true;
+    static Color PAPER, SHEET, INK, MUTED, RULE, RUST, OLIVE, WARN_BG;
+    static { palette(true); }
+
+    static void palette(boolean d) {
+        dark = d;
+        if (d) {
+            PAPER = new Color(0x141210); SHEET = new Color(0x1D1A17); INK = new Color(0xE8E1D3);
+            MUTED = new Color(0x8A8174); RULE = new Color(0x332E28); RUST = new Color(0xE0673F);
+            OLIVE = new Color(0xA3BE6E); WARN_BG = new Color(0x351C13);
+        } else {
+            PAPER = new Color(0xF1ECE2); SHEET = new Color(0xFAF7F1); INK = new Color(0x1D1B18);
+            MUTED = new Color(0x7A7266); RULE = new Color(0xD6CEC0); RUST = new Color(0xA8361B);
+            OLIVE = new Color(0x4F6B2E); WARN_BG = new Color(0xF4E1D8);
+        }
+    }
+
+    static String hex(Color c) { return String.format("#%06X", c.getRGB() & 0xFFFFFF); }
 
     static final String UI_FAMILY = findUiFamily();
 
@@ -82,7 +92,8 @@ public class EmToolGUI extends JFrame {
     final FlatButton analyzeBtn = new FlatButton(true);
     final FlatButton copyBtn = new FlatButton(false);
     final FlatButton saveBtn = new FlatButton(false);
-    final LangToggle lang = new LangToggle();
+    final Toggle lang = new Toggle(() -> "EN", () -> "عربي", () -> arabic, () -> setArabic(!arabic));
+    final Toggle theme = new Toggle(() -> arabic ? "داكن" : "DARK", () -> arabic ? "فاتح" : "LIGHT", () -> !dark, this::flipTheme);
     final SectionTitle hHead = new SectionTitle("01");
     final SectionTitle lHead = new SectionTitle("02");
     final SectionTitle aHead = new SectionTitle("03");
@@ -138,8 +149,9 @@ public class EmToolGUI extends JFrame {
         brand.add(tagline);
         top.add(brand, BorderLayout.LINE_START);
 
-        JPanel langWrap = new JPanel(new FlowLayout(FlowLayout.TRAILING, 0, 6));
+        JPanel langWrap = new JPanel(new FlowLayout(FlowLayout.TRAILING, 18, 6));
         langWrap.setOpaque(false);
+        langWrap.add(theme);
         langWrap.add(lang);
         top.add(langWrap, BorderLayout.LINE_END);
 
@@ -272,6 +284,20 @@ public class EmToolGUI extends JFrame {
         s.setBorder(BorderFactory.createEmptyBorder());
         s.getViewport().setBackground(SHEET);
         s.getVerticalScrollBar().setUnitIncrement(14);
+        s.getVerticalScrollBar().setPreferredSize(new Dimension(8, 8));
+        s.getVerticalScrollBar().setUI(new javax.swing.plaf.basic.BasicScrollBarUI() {
+            @Override protected void configureScrollBarColors() { thumbColor = RULE; trackColor = SHEET; }
+            @Override protected JButton createDecreaseButton(int o) { return zeroButton(); }
+            @Override protected JButton createIncreaseButton(int o) { return zeroButton(); }
+            @Override protected void paintThumb(Graphics g, JComponent c, Rectangle r) {
+                g.setColor(isDragging ? MUTED : RULE);
+                g.fillRect(r.x + 2, r.y, r.width - 4, r.height);
+            }
+            @Override protected void paintTrack(Graphics g, JComponent c, Rectangle r) {
+                g.setColor(SHEET);
+                g.fillRect(r.x, r.y, r.width, r.height);
+            }
+        });
         return s;
     }
 
@@ -407,6 +433,8 @@ public class EmToolGUI extends JFrame {
         v.setFont(MONO);
         v.setOpaque(false);
         v.setBorder(null);
+        v.setSelectionColor(RUST);
+        v.setSelectedTextColor(SHEET);
         ((javax.swing.text.DefaultCaret) v.getCaret()).setUpdatePolicy(javax.swing.text.DefaultCaret.NEVER_UPDATE);
         v.setForeground(value.isEmpty() || value.equals("-") ? MUTED : INK);
         if ((key.equals("SPF") || key.equals("DKIM") || key.equals("DMARC")) && !value.isEmpty() && !value.equals("-")) {
@@ -439,6 +467,18 @@ public class EmToolGUI extends JFrame {
         renderReport();
     }
 
+    void flipTheme() {
+        palette(!dark);
+        EmToolGUI w = new EmToolGUI();
+        w.setBounds(getBounds());
+        w.pathField.setText(pathField.getText());
+        w.report = report;
+        w.statusKey = statusKey; w.statusExtra = statusExtra; w.statusError = statusError;
+        if (arabic) w.setArabic(true); else { w.refreshText(); w.renderReport(); }
+        w.setVisible(true);
+        dispose();
+    }
+
     void refreshText() {
         tagline.setText(t("tagline"));
         dropLabel.setText(t("drop"));
@@ -457,6 +497,7 @@ public class EmToolGUI extends JFrame {
         status.setFont(arabic ? UI : MONO);
         hHead.setFont(UI_TITLE); lHead.setFont(UI_TITLE); aHead.setFont(UI_TITLE); iHead.setFont(UI_TITLE);
         lang.repaint();
+        theme.repaint();
         repaint();
     }
 
@@ -582,42 +623,48 @@ public class EmToolGUI extends JFrame {
         }
     }
 
-    class LangToggle extends JComponent {
-        final String en = "EN", ar = "عربي";
-        LangToggle() {
-            setPreferredSize(new Dimension(96, 28));
+    class Toggle extends JComponent {
+        final java.util.function.Supplier<String> left, right;
+        final java.util.function.BooleanSupplier rightOn;
+
+        Toggle(java.util.function.Supplier<String> left, java.util.function.Supplier<String> right,
+               java.util.function.BooleanSupplier rightOn, Runnable flip) {
+            this.left = left; this.right = right; this.rightOn = rightOn;
+            setPreferredSize(new Dimension(110, 28));
             setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            setToolTipText("English / عربي");
             addMouseListener(new MouseAdapter() {
-                @Override public void mouseClicked(MouseEvent e) { setArabic(!arabic); }
+                @Override public void mouseClicked(MouseEvent e) { flip.run(); }
             });
         }
+
+        Font fontFor(String s) { return s.matches(".*[\\u0600-\\u06FF].*") ? UI_TITLE : MONO_BOLD; }
 
         @Override protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-            Font fe = MONO_BOLD, fa = UI_TITLE;
-            int y = 18;
-            g2.setFont(fe);
-            int enW = g2.getFontMetrics().stringWidth(en);
+            String a = left.get(), b = right.get();
+            boolean on = rightOn.getAsBoolean();
+            Font fa = fontFor(a), fb = fontFor(b);
+            int y = 18, gap = 22;
             g2.setFont(fa);
-            int arW = g2.getFontMetrics().stringWidth(ar);
-            int gap = 22;
-            int x0 = (getWidth() - enW - gap - arW) / 2;
+            int aW = g2.getFontMetrics().stringWidth(a);
+            g2.setFont(fb);
+            int bW = g2.getFontMetrics().stringWidth(b);
+            int x0 = (getWidth() - aW - gap - bW) / 2;
+            int bX = x0 + aW + gap;
 
-            g2.setFont(fe);
-            g2.setColor(arabic ? MUTED : INK);
-            g2.drawString(en, x0, y);
-            g2.setColor(RULE);
-            g2.drawLine(x0 + enW + gap / 2, 5, x0 + enW + gap / 2, 22);
             g2.setFont(fa);
-            g2.setColor(arabic ? INK : MUTED);
-            int arX = x0 + enW + gap;
-            g2.drawString(ar, arX, y);
+            g2.setColor(on ? MUTED : INK);
+            g2.drawString(a, x0, y);
+            g2.setColor(RULE);
+            g2.drawLine(x0 + aW + gap / 2, 5, x0 + aW + gap / 2, 22);
+            g2.setFont(fb);
+            g2.setColor(on ? INK : MUTED);
+            g2.drawString(b, bX, y);
 
             g2.setColor(RUST);
-            if (arabic) g2.fillRect(arX, 25, arW, 2);
-            else g2.fillRect(x0, 25, enW, 2);
+            if (on) g2.fillRect(bX, 25, bW, 2);
+            else g2.fillRect(x0, 25, aW, 2);
             g2.dispose();
         }
     }
@@ -638,7 +685,7 @@ public class EmToolGUI extends JFrame {
                 @Override public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean sel, boolean focus) {
                     JLabel l = (JLabel) super.getListCellRendererComponent(list, "", index, sel, false);
                     String[] row = (String[]) value;
-                    String muted = sel ? "#C9C1B3" : "#9A9184";
+                    String muted = hex(sel ? RULE : MUTED);
                     StringBuilder h = new StringBuilder("<html>\u200E<span style='color:" + muted + "'>")
                         .append(String.format("%02d", index + 1)).append("</span>&nbsp;&nbsp;").append(esc(row[0]));
                     if (row[1] != null)
@@ -678,6 +725,12 @@ public class EmToolGUI extends JFrame {
                 g2.dispose();
             }
         }
+    }
+
+    static JButton zeroButton() {
+        JButton b = new JButton();
+        b.setPreferredSize(new Dimension(0, 0));
+        return b;
     }
 
     static boolean isPrivate(String ip) {

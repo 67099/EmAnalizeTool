@@ -1,97 +1,134 @@
-# EmTool · محلل الإيميلات
+<h1 align="center">EmTool</h1>
 
-Reads an `.eml` file and pulls out the artifacts an analyst needs: the key headers, every link (defanged so nobody clicks it by accident), and the attachment names. Runs locally, nothing is sent anywhere.
+<p align="center">
+  Email artifact extractor for phishing triage<br>
+  <a href="#بالعربي">العربية</a> · <a href="#english">English</a>
+</p>
 
-يقرأ ملف الإيميل `.eml` ويطلع لك الأدلة اللي تحتاجها في التحليل: أهم الترويسات، كل الروابط (معطّلة عشان ما أحد يضغطها بالغلط)، وأسماء المرفقات. يشتغل على جهازك بس، وما يرسل شي لأي مكان.
+<p align="center">
+  <img alt="Java 8+" src="https://img.shields.io/badge/Java-8%2B-1D1A17?style=flat-square&labelColor=141210">
+  <img alt="Swing" src="https://img.shields.io/badge/UI-Swing-1D1A17?style=flat-square&labelColor=141210">
+  <img alt="javax.mail" src="https://img.shields.io/badge/parser-javax.mail%201.6.2-1D1A17?style=flat-square&labelColor=141210">
+  <img alt="Offline" src="https://img.shields.io/badge/runs-offline-E0673F?style=flat-square&labelColor=141210">
+</p>
 
-![EmTool](docs/screenshot-en.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-en-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="docs/screenshot-en-light.png">
+  <img alt="EmTool main window" src="docs/screenshot-en-dark.png">
+</picture>
 
-## What it shows
+---
 
-| Section | What you get |
+<div dir="rtl">
+
+## بالعربي
+
+تفتح الإيميل المشبوه بدون ما تفتحه فعلياً. تعطي الأداة ملف `.eml` وتطلع لك كل شي يهمك في التحليل في شاشة وحدة: مين أرسله ومن وين جا، وش فيه روابط، وش فيه مرفقات، وهل اجتاز فحص SPF و DKIM و DMARC. كل شي يصير على جهازك، وما يطلع أي شي للنت.
+
+### وش تطلع لك
+
+| القسم | المحتوى |
 |---|---|
-| Email info | Subject, From, To, Date, Return-Path, Reply-To, Message-ID, X-Mailer, and the SPF, DKIM and DMARC results (pass in green, fail in red) |
-| Warning | Shown when Return-Path or Reply-To points to a different domain than the sender, a common phishing sign |
-| Links | Every `http(s)` URL from the plain-text and HTML body, de-duplicated and defanged (`hxxps://site[.]com`) |
-| Attachments | Name, type, size and SHA-256 of each attachment, ready to paste into VirusTotal |
-| Server IPs | IPs from the `Received` headers, from the sender's side to yours; private ranges are marked |
-| Footer | SHA-256 of the `.eml` file |
+| معلومات الإيميل | الموضوع، المرسل، المستلم، التاريخ، Return-Path، Reply-To، Message-ID، X-Mailer |
+| فحص المرسل | نتيجة SPF و DKIM و DMARC، الأخضر نجح والأحمر فشل |
+| تنبيه | إذا Return-Path أو Reply-To يروح لدومين غير دومين المرسل، وهذي من أوضح علامات التصيد |
+| الروابط | كل الروابط من نص الإيميل ومن الـ HTML، بدون تكرار، ومعطّلة عشان ما تنفتح بالغلط: `hxxps://site[.]com` |
+| المرفقات | الاسم والنوع والحجم و SHA-256، جاهز تحطه في VirusTotal |
+| عناوين IP | من ترويسات Received، مرتبة من جهة المرسل لين وصلت لك، والداخلية عليها علامة |
 
-Then copy the whole report or save it as a `.txt`. Double-click any line (a link, a hash, an IP) to copy it.
+دبل كلك على أي سطر ينسخه، وتقدر تنسخ التقرير كامل أو تحفظه كملف نصي. الواجهة داكنة افتراضياً وفيها وضع فاتح، وتتحول بين العربي والإنجليزي من فوق.
 
-The interface switches between English and Arabic from the `EN | عربي` toggle at the top; in Arabic the layout flips right-to-left while addresses and links stay left-to-right.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-ar-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="docs/screenshot-ar-light.png">
+  <img alt="EmTool بالعربي" src="docs/screenshot-ar-dark.png">
+</picture>
 
-## Run it
+### التشغيل
 
-You need Java 8 or newer. From inside the `EmAnalizeTool` folder:
+تحتاج Java 8 أو أحدث. افتح التيرمنل داخل فولدر `EmAnalizeTool`:
 
-**Windows**
+</div>
+
 ```
 javac -cp ".;lib/*" -encoding UTF-8 *.java
-java -cp ".;lib/*" EmToolGUI
+java  -cp ".;lib/*" EmToolGUI
 ```
 
-**macOS / Linux**
+<div dir="rtl">
+
+أمر `javac` مرة وحدة بس. على ماك أو لينكس بدّل `;` بـ `:`. بعدها اسحب الإيميل على النافذة أو اضغط **اختر ملف**.
+النسخة الأصلية اللي تشتغل بالتيرمنل موجودة زي ما هي: `java -cp ".;lib/*" EmTool`
+
+### الخط
+
+الأداة مصممة على خط ثمانية. نزّله من صفحة الخط الرسمية حقت ثمانية، وثبّته على جهازك أو حط ملفاته في `EmAnalizeTool/fonts/`، والأداة تلقاه بنفسها. إذا ما لقته تشتغل بخط النظام. ملفات الخط مو في الريبو لأن رخصتها ما تسمح بإعادة النشر.
+
+### ليش javax.mail
+
+الإيميل مو نص عادي: فيه أجزاء متداخلة وترميزات ومرفقات. `javax.mail` يفك هذا كله مباشرة، ولو قريناه كـ txt كان لازم نكتب كل هالمعالجة بأيدينا.
+
+</div>
+
+---
+
+## English
+
+Open a suspicious email without actually opening it. Give EmTool an `.eml` file and it lays out everything that matters for triage on one screen: who sent it and through which servers, every link, every attachment, and whether it passed SPF, DKIM and DMARC. Everything runs locally; nothing leaves your machine.
+
+### What it extracts
+
+| Section | Content |
+|---|---|
+| Email info | Subject, From, To, Date, Return-Path, Reply-To, Message-ID, X-Mailer |
+| Sender checks | SPF, DKIM and DMARC results, green on pass and red on fail |
+| Warning | Raised when Return-Path or Reply-To points to a different domain than the sender, a classic phishing sign |
+| Links | Every URL in the plain-text and HTML body, de-duplicated and defanged so it can't be clicked by accident: `hxxps://site[.]com` |
+| Attachments | Name, type, size and SHA-256, ready for VirusTotal |
+| Server IPs | Parsed from the `Received` chain, ordered from the sender's side to yours, private ranges marked |
+
+Double-click any line to copy it, or copy and save the full report as text. Dark theme by default with a light option, and an English / Arabic switch in the top bar.
+
+### Run
+
+Java 8 or newer. From inside the `EmAnalizeTool` folder:
+
 ```
+# Windows
+javac -cp ".;lib/*" -encoding UTF-8 *.java
+java  -cp ".;lib/*" EmToolGUI
+
+# macOS / Linux
 javac -cp ".:lib/*" -encoding UTF-8 *.java
-java -cp ".:lib/*" EmToolGUI
+java  -cp ".:lib/*" EmToolGUI
 ```
 
-Compile once; after that the `java` line is enough. Drop an `.eml` file on the window, paste its path, or press **browse**. You can also pass the path directly: `java -cp ".;lib/*" EmToolGUI path\to\mail.eml`.
-
-The original terminal version is still there: `java -cp ".;lib/*" EmTool`.
+Compile once. Then drop an email on the window, paste its path, or press **browse**. A path can also be passed directly: `java -cp ".;lib/*" EmToolGUI mail.eml`.
+The original command-line tool is unchanged: `java -cp ".;lib/*" EmTool`.
 
 ### Font
 
-The window uses the Thmanyah font when it can find it. Download it from Thmanyah's official font page, then either install it on your system or put the `.ttf`/`.otf` files in `EmAnalizeTool/fonts/`. Without it the tool falls back to the system font. The font files are not included in this repo because Thmanyah's license does not allow redistributing them.
+The interface is designed around the Thmanyah typeface. Download it from Thmanyah's official font page, then install it or drop the `.ttf` / `.otf` files into `EmAnalizeTool/fonts/`; EmTool picks it up automatically and falls back to the system font otherwise. The font files are not bundled because their license does not permit redistribution.
 
-## Why javax.mail and not plain text
+### How it works
 
-`javax.mail` parses the email format directly (MIME parts, encodings, attachments). Reading the file as plain text would mean re-implementing all of that by hand.
+```
+.eml ──> javax.mail MimeMessage
+          ├─ headers ─────────> email info, SPF / DKIM / DMARC, domain check
+          ├─ Received chain ──> server IPs (reversed: sender first)
+          └─ MIME tree
+               ├─ text/plain, text/html ──> URL regex ──> defang
+               └─ named parts ────────────> name, type, size, SHA-256
+```
 
-## Files
+### Project layout
 
 ```
 EmAnalizeTool/
   EmTool.java          original command-line tool
-  EmailAnalyzer.java   parsing used by the GUI
-  EmToolGUI.java       the desktop window
-  lib/                 javax.mail + javax.activation
+  EmailAnalyzer.java   parsing behind the GUI
+  EmToolGUI.java       desktop window
+  lib/                 javax.mail, javax.activation
+docs/                  screenshots
 ```
-
----
-
-## بالعربي
-
-### وش يسوي
-- يطلع معلومات الإيميل: الموضوع، المرسل، المستلم، التاريخ، Return-Path، Reply-To، Message-ID، X-Mailer، ونتيجة SPF و DKIM و DMARC (الأخضر pass، والأحمر fail)
-- ينبهك لو Return-Path أو Reply-To يروح لدومين غير دومين المرسل، وهذي علامة تصيد معروفة
-- يطلع كل الروابط من نص الإيميل ومن الـ HTML، بدون تكرار، ومعطّلة بهالشكل `hxxps://site[.]com`
-- يعرض المرفقات: الاسم والنوع والحجم و SHA-256، تحطه في VirusTotal على طول
-- يطلع عناوين IP من ترويسات Received، من جهة المرسل لين توصلك، والداخلية عليها علامة
-- يحسب SHA-256 لملف الإيميل نفسه
-- تقدر تنسخ التقرير كامل أو تحفظه كملف نصي، ودبل كلك على أي سطر (رابط، هاش، IP) ينسخه
-
-الواجهة فيها عربي وإنجليزي من الزر اللي فوق `EN | عربي`، وبالعربي الواجهة تنقلب من اليمين لليسار.
-
-![EmTool بالعربي](docs/screenshot-ar.png)
-
-### طريقة التشغيل
-تحتاج Java 8 أو أحدث. افتح التيرمنل داخل فولدر `EmAnalizeTool`:
-
-```
-javac -cp ".;lib/*" -encoding UTF-8 *.java
-java -cp ".;lib/*" EmToolGUI
-```
-
-أمر `javac` تسويه أول مرة بس. على ماك أو لينكس بدّل `;` بـ `:`.
-بعدها اسحب ملف الإيميل على النافذة، أو الصق مساره، أو اضغط **اختر ملف**.
-
-النسخة القديمة اللي تشتغل بالتيرمنل باقية: `java -cp ".;lib/*" EmTool`
-
-### الخط
-الأداة تستخدم خط ثمانية إذا لقته. نزّله من صفحة الخط الرسمية حقت ثمانية، وبعدها يا تثبته على جهازك، يا تحط ملفات `.ttf` أو `.otf` داخل فولدر `EmAnalizeTool/fonts/`. إذا ما لقته تشتغل بخط النظام. ملفات الخط مو موجودة في الريبو لأن رخصة ثمانية ما تسمح بإعادة نشرها.
-
-### ليش javax.mail وما خليته txt
-- مكتبة javax.mail جاهزة وتتعامل مع الإيميلات مباشرة (الأجزاء، الترميز، المرفقات)
-- لو قريته كـ txt بتحتاج تعالج كل هذا بنفسك
