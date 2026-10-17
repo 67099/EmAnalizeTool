@@ -31,16 +31,18 @@ public class EmToolGUI extends JFrame {
 
     static String hex(Color c) { return String.format("#%06X", c.getRGB() & 0xFFFFFF); }
 
-    static final String UI_FAMILY = findUiFamily();
+    static final Font FACE_MED  = face("medium");
+    static final Font FACE_BOLD = face("bold");
+    static final String UI_FAMILY = FACE_BOLD.getFamily();
 
     static final Font MONO      = new Font(Font.MONOSPACED, Font.PLAIN, 13);
     static final Font MONO_BOLD = new Font(Font.MONOSPACED, Font.BOLD, 13);
     static final Font MONO_SMALL = new Font(Font.MONOSPACED, Font.PLAIN, 11);
     static final Font MARK      = new Font(Font.MONOSPACED, Font.BOLD, 30);
-    static final Font UI        = new Font(UI_FAMILY, Font.BOLD, 14);
-    static final Font UI_SMALL  = new Font(UI_FAMILY, Font.BOLD, 12);
-    static final Font UI_BOLD   = new Font(UI_FAMILY, Font.BOLD, 13);
-    static final Font UI_TITLE  = new Font(UI_FAMILY, Font.BOLD, 15);
+    static final Font UI        = FACE_MED.deriveFont(15f);
+    static final Font UI_SMALL  = FACE_MED.deriveFont(13f);
+    static final Font UI_BOLD   = FACE_BOLD.deriveFont(14f);
+    static final Font UI_TITLE  = FACE_BOLD.deriveFont(16f);
 
     // strings
     static final String[][] TEXT = {
@@ -498,23 +500,29 @@ public class EmToolGUI extends JFrame {
 
     // fonts
 
-    static String findUiFamily() {
+    static boolean fontsLoaded;
+
+    static Font face(String weight) {
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-        for (File dir : new File[]{new File("fonts"), new File(codeDir(), "fonts")}) {
-            File[] files = dir.listFiles((d, n) -> n.toLowerCase().matches(".*\\.(ttf|otf)$"));
-            if (files == null) continue;
-            for (File f : files) {
-                try { ge.registerFont(Font.createFont(Font.TRUETYPE_FONT, f)); } catch (Exception ignored) { }
+        if (!fontsLoaded) {
+            fontsLoaded = true;
+            for (File dir : new File[]{new File("fonts"), new File(codeDir(), "fonts")}) {
+                File[] files = dir.listFiles((d, n) -> n.toLowerCase().matches(".*\\.(ttf|otf)$"));
+                if (files == null) continue;
+                for (File f : files) {
+                    try { ge.registerFont(Font.createFont(Font.TRUETYPE_FONT, f)); } catch (Exception ignored) { }
+                }
             }
         }
-        String fallback = null;
-        for (String fam : ge.getAvailableFontFamilyNames(Locale.ROOT)) {
-            String low = fam.toLowerCase();
-            if (!low.contains("thmanyah") && !fam.contains("ثمانية")) continue;
-            if (low.contains("sans")) return fam;
-            if (fallback == null) fallback = fam;
+        Font any = null;
+        for (Font f : ge.getAllFonts()) {
+            String n = f.getFontName(Locale.ROOT).toLowerCase();
+            if (!n.contains("thmanyah sans") && !n.contains("thmanyahsans")) continue;
+            if (n.endsWith(weight)) return f.deriveFont(Font.PLAIN, 14f);
+            if (n.endsWith("bold") || any == null) any = f;
         }
-        return fallback != null ? fallback : Font.DIALOG;
+        if (any != null) return any.deriveFont(Font.PLAIN, 14f);
+        return new Font(Font.DIALOG, Font.BOLD, 14);
     }
 
     static File codeDir() {
