@@ -116,7 +116,7 @@ The interface is designed around the Thmanyah typeface. Download it from Thmanya
 ```
 .eml ──> javax.mail MimeMessage
           ├─ headers ─────────> email info, SPF / DKIM / DMARC, domain check
-          ├─ Received chain ──> server IPs (reversed: sender first)
+          ├─ Received chain ──> server IPs, sender first
           └─ MIME tree
                ├─ text/plain, text/html ──> URL regex ──> defang
                └─ named parts ────────────> name, type, size, SHA-256

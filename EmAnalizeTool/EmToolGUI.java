@@ -37,10 +37,10 @@ public class EmToolGUI extends JFrame {
     static final Font MONO_BOLD = new Font(Font.MONOSPACED, Font.BOLD, 13);
     static final Font MONO_SMALL = new Font(Font.MONOSPACED, Font.PLAIN, 11);
     static final Font MARK      = new Font(Font.MONOSPACED, Font.BOLD, 30);
-    static final Font UI        = new Font(UI_FAMILY, Font.PLAIN, 14);
-    static final Font UI_SMALL  = new Font(UI_FAMILY, Font.PLAIN, 12);
+    static final Font UI        = new Font(UI_FAMILY, Font.BOLD, 14);
+    static final Font UI_SMALL  = new Font(UI_FAMILY, Font.BOLD, 12);
     static final Font UI_BOLD   = new Font(UI_FAMILY, Font.BOLD, 13);
-    static final Font UI_TITLE  = new Font(UI_FAMILY, Font.BOLD, 14);
+    static final Font UI_TITLE  = new Font(UI_FAMILY, Font.BOLD, 15);
 
     // strings
     static final String[][] TEXT = {
@@ -49,23 +49,23 @@ public class EmToolGUI extends JFrame {
         {"browse",    "browse",                                  "اختر ملف"},
         {"analyze",   "Analyze",                                 "حلّل"},
         {"headers",   "Email info",                              "معلومات الإيميل"},
-        {"links",     "Links (defanged)",                        "الروابط (معطّلة)"},
+        {"links",     "Links",                                   "الروابط"},
         {"attach",    "Attachments",                             "المرفقات"},
-        {"ips",       "Server IPs (sender first)",               "عناوين IP (من المرسل للمستلم)"},
-        {"noattach",  "No attachments.",                         "ما فيه مرفقات."},
-        {"noips",     "No IPs found.",                           "ما لقيت عناوين IP."},
+        {"ips",       "Server IPs",                              "عناوين IP"},
+        {"noattach",  "None",                                    "ما فيه"},
+        {"noips",     "None",                                    "ما فيه"},
         {"copy",      "Copy report",                             "نسخ التقرير"},
-        {"save",      "Save .txt",                               "حفظ كملف نصي"},
-        {"ready",     "ready. pick an .eml file to start",       "جاهز. اختر ملف الإيميل عشان نبدأ"},
+        {"save",      "Save",                                    "حفظ"},
+        {"ready",     "pick an .eml file",                       "اختر ملف الإيميل"},
         {"notfound",  "Error 404 |E!  file not found",           "Error 404 |E!  الملف مو موجود"},
         {"failed",    "could not read this file: ",              "ما قدرت أفتح الملف: "},
         {"done",      "done.",                                   "تم."},
         {"copied",    "copied",                                  "تم النسخ"},
         {"saved",     "saved to ",                               "انحفظ في "},
-        {"empty",     "nothing here yet",                        "لسا ما اخترت ملف"},
-        {"hint",      "double-click any line to copy it",        "دبل كلك على أي سطر عشان تنسخه"},
+        {"empty",     "empty",                                   "فاضي"},
+        {"hint",      "double-click to copy",                    "دبل كلك للنسخ"},
         {"private",   "internal network",                        "شبكة داخلية"},
-        {"mismatch",  "! %s goes to %s, but the sender is %s",  "! %s يروح لـ %s، والمرسل %s"},
+        {"mismatch",  "%s goes to %s, sender is %s",            "%s يروح لـ %s والمرسل %s"},
     };
     static final Map<String, String[]> T = new HashMap<>();
     static { for (String[] r : TEXT) T.put(r[0], new String[]{r[1], r[2]}); }
@@ -106,7 +106,6 @@ public class EmToolGUI extends JFrame {
     final CopyList ipList = new CopyList(INK);
     final JLabel status = new JLabel();
     final JLabel hashLabel = new JLabel();
-    final JLabel hintLabel = new JLabel();
     String statusKey = "ready", statusExtra = "";
     boolean statusError = false;
 
@@ -220,10 +219,6 @@ public class EmToolGUI extends JFrame {
         JPanel lInner = new JPanel(new BorderLayout());
         lInner.setBackground(SHEET);
         lInner.add(plainScroll(linkList), BorderLayout.CENTER);
-        hintLabel.setFont(UI_SMALL);
-        hintLabel.setForeground(MUTED);
-        hintLabel.setBorder(new EmptyBorder(6, 10, 6, 10));
-        lInner.add(hintLabel, BorderLayout.SOUTH);
 
         JPanel attCol = column(aHead, plainScroll(attachList));
         attCol.setPreferredSize(new Dimension(100, 180));
@@ -490,7 +485,7 @@ public class EmToolGUI extends JFrame {
         lHead.text = t("links");
         aHead.text = t("attach");
         iHead.text = t("ips");
-        hintLabel.setText(t("hint"));
+        for (CopyList l : new CopyList[]{linkList, attachList, ipList}) l.setToolTipText(t("hint"));
         status.setText(t(statusKey) + statusExtra);
         status.setForeground(statusError ? RUST : INK);
         tagline.setFont(arabic ? UI : MONO);
