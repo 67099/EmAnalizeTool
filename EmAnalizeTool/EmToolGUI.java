@@ -35,10 +35,10 @@ public class EmToolGUI extends JFrame {
     static final Font FACE_BOLD = face("bold");
     static final String UI_FAMILY = FACE_BOLD.getFamily();
 
-    static final Font MONO      = new Font(Font.MONOSPACED, Font.PLAIN, 13);
-    static final Font MONO_BOLD = new Font(Font.MONOSPACED, Font.BOLD, 13);
-    static final Font MONO_SMALL = new Font(Font.MONOSPACED, Font.PLAIN, 11);
-    static final Font MARK      = new Font(Font.MONOSPACED, Font.BOLD, 30);
+    static final Font BODY      = FACE_MED.deriveFont(14f);
+    static final Font TEXT_BOLD = FACE_BOLD.deriveFont(14f);
+    static final Font TEXT_SMALL = FACE_MED.deriveFont(12f);
+    static final Font MARK      = FACE_BOLD.deriveFont(32f);
     static final Font UI        = FACE_MED.deriveFont(15f);
     static final Font UI_SMALL  = FACE_MED.deriveFont(13f);
     static final Font UI_BOLD   = FACE_BOLD.deriveFont(14f);
@@ -178,7 +178,7 @@ public class EmToolGUI extends JFrame {
         left.add(dropLabel);
         left.add(browseBtn);
 
-        pathField.setFont(MONO);
+        pathField.setFont(BODY);
         pathField.setForeground(INK);
         pathField.setBackground(SHEET);
         pathField.setCaretColor(RUST);
@@ -245,7 +245,7 @@ public class EmToolGUI extends JFrame {
         JPanel info = new JPanel();
         info.setOpaque(false);
         info.setLayout(new BoxLayout(info, BoxLayout.Y_AXIS));
-        hashLabel.setFont(MONO_SMALL);
+        hashLabel.setFont(TEXT_SMALL);
         hashLabel.setForeground(MUTED);
         info.add(status);
         info.add(hashLabel);
@@ -416,7 +416,7 @@ public class EmToolGUI extends JFrame {
         c.gridx = 0; c.weightx = 0; c.fill = GridBagConstraints.NONE;
         c.insets = new Insets(6, 12, 6, 10);
         JLabel k = new JLabel(ar ? AR_KEYS.get(key) : key.toUpperCase());
-        k.setFont(ar ? UI_BOLD : new Font(Font.MONOSPACED, Font.BOLD, 11));
+        k.setFont(ar ? UI_BOLD : FACE_BOLD.deriveFont(12f));
         k.setForeground(MUTED);
         k.setPreferredSize(new Dimension(96, 18));
         headerRows.add(k, c);
@@ -427,7 +427,7 @@ public class EmToolGUI extends JFrame {
         v.setEditable(false);
         v.setLineWrap(true);
         v.setWrapStyleWord(false);
-        v.setFont(MONO);
+        v.setFont(BODY);
         v.setOpaque(false);
         v.setBorder(null);
         v.setSelectionColor(RUST);
@@ -438,7 +438,7 @@ public class EmToolGUI extends JFrame {
             String low = value.toLowerCase();
             if (low.startsWith("pass")) v.setForeground(OLIVE);
             else if (low.startsWith("fail") || low.startsWith("softfail") || low.startsWith("none")) v.setForeground(RUST);
-            v.setFont(MONO_BOLD);
+            v.setFont(TEXT_BOLD);
         }
         headerRows.add(v, c);
         c.gridy++;
@@ -490,8 +490,8 @@ public class EmToolGUI extends JFrame {
         for (CopyList l : new CopyList[]{linkList, attachList, ipList}) l.setToolTipText(t("hint"));
         status.setText(t(statusKey) + statusExtra);
         status.setForeground(statusError ? RUST : INK);
-        tagline.setFont(arabic ? UI : MONO);
-        status.setFont(arabic ? UI : MONO);
+        tagline.setFont(UI);
+        status.setFont(UI);
         hHead.setFont(UI_TITLE); lHead.setFont(UI_TITLE); aHead.setFont(UI_TITLE); iHead.setFont(UI_TITLE);
         lang.repaint();
         theme.repaint();
@@ -548,7 +548,7 @@ public class EmToolGUI extends JFrame {
             int w = getWidth(), y = 17;
             String label = arabic ? text : text.toUpperCase();
 
-            g2.setFont(MONO_BOLD);
+            g2.setFont(TEXT_BOLD);
             FontMetrics nm = g2.getFontMetrics();
             int numW = nm.stringWidth(num);
             g2.setFont(getFont());
@@ -563,7 +563,7 @@ public class EmToolGUI extends JFrame {
             int lineB = rtl ? txtX - 10 : w - cntW - (cnt.isEmpty() ? 0 : 10);
             int cntX = rtl ? 0 : w - cntW;
 
-            g2.setFont(MONO_BOLD);
+            g2.setFont(TEXT_BOLD);
             g2.setColor(RUST);
             g2.drawString(num, numX, y);
             g2.setFont(getFont());
@@ -572,7 +572,7 @@ public class EmToolGUI extends JFrame {
             g2.setColor(RULE);
             if (lineB > lineA) g2.drawLine(lineA, y - 4, lineB, y - 4);
             if (!cnt.isEmpty()) {
-                g2.setFont(MONO_BOLD);
+                g2.setFont(TEXT_BOLD);
                 g2.setColor(count > 0 ? RUST : MUTED);
                 g2.drawString(cnt, cntX, y);
             }
@@ -633,14 +633,14 @@ public class EmToolGUI extends JFrame {
         Toggle(java.util.function.Supplier<String> left, java.util.function.Supplier<String> right,
                java.util.function.BooleanSupplier rightOn, Runnable flip) {
             this.left = left; this.right = right; this.rightOn = rightOn;
-            setPreferredSize(new Dimension(110, 28));
+            setPreferredSize(new Dimension(130, 28));
             setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             addMouseListener(new MouseAdapter() {
                 @Override public void mouseClicked(MouseEvent e) { flip.run(); }
             });
         }
 
-        Font fontFor(String s) { return s.matches(".*[\\u0600-\\u06FF].*") ? UI_TITLE : MONO_BOLD; }
+        Font fontFor(String s) { return UI_TITLE; }
 
         @Override protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
@@ -678,7 +678,7 @@ public class EmToolGUI extends JFrame {
 
         CopyList(Color text) {
             setModel(model);
-            setFont(MONO);
+            setFont(BODY);
             setBackground(SHEET);
             setForeground(text);
             setSelectionBackground(INK);
@@ -698,7 +698,7 @@ public class EmToolGUI extends JFrame {
                          .append(esc(row[1])).append("</font></span>");
                     l.setText(h.append("</html>").toString());
                     l.setBorder(new EmptyBorder(5, 10, 5, 10));
-                    l.setFont(MONO);
+                    l.setFont(BODY);
                     if (!sel) { l.setBackground(SHEET); l.setForeground(text); }
                     return l;
                 }
